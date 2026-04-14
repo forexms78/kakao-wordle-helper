@@ -26,14 +26,25 @@ describe('getPattern', () => {
     expect(result[2]).toBe('yellow') // ㅇ → answer에 있음, 위치 다름
   })
 
+  it('green으로 소진된 자모는 yellow로 재판정되지 않음', () => {
+    // answer에 ㅏ 1개 (위치 3), guess에 ㅏ 2개 (위치 0, 3)
+    // 위치 3: green (소진됨) → 위치 0의 ㅏ: gray (더 이상 남은 ㅏ 없음)
+    const guess =  ['ㅏ', 'ㅂ', 'ㄴ', 'ㅏ', 'ㅇ']
+    const answer = ['ㄱ', 'ㅁ', 'ㄷ', 'ㅏ', 'ㄹ']
+    const result = getPattern(guess, answer)
+    expect(result[3]).toBe('green')  // ㅏ at pos 3: green
+    expect(result[0]).toBe('gray')   // ㅏ at pos 0: gray (ㅏ already consumed)
+  })
+
   it('중복 자모 처리 — answer에 1개인데 guess에 2개', () => {
     // guess에 ㅏ 두 번, answer에 ㅏ 한 번 (위치 3)
+    // 위치 3: green → ㅏ 소진됨 → 위치 0, 1의 ㅏ는 모두 gray
     const guess = ['ㅏ','ㅏ','ㅂ','ㅏ','ㅇ']
     const answer = ['ㄱ','ㄱ','ㅂ','ㅏ','ㅇ']
     const result = getPattern(guess, answer)
-    // 첫 ㅏ (위치 0): answer[3]에 ㅏ 있으므로 yellow
-    expect(result[0]).toBe('yellow')
-    // 두번째 ㅏ (위치 1): ㅏ 이미 소진 → gray
+    // 첫 ㅏ (위치 0): 위치 3의 ㅏ가 green으로 소진됨 → gray
+    expect(result[0]).toBe('gray')
+    // 두번째 ㅏ (위치 1): 마찬가지로 gray
     expect(result[1]).toBe('gray')
     // ㅂ, ㅏ, ㅇ 나머지는 green
     expect(result[2]).toBe('green')

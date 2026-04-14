@@ -13,24 +13,23 @@ export interface AttemptHint {
  */
 export function getPattern(guess: string[], answer: string[]): HintColor[] {
   const pattern: HintColor[] = new Array(5).fill('gray')
-  // remaining: green으로 매칭된 위치를 포함해 yellow 검색에 사용
-  // green 위치는 yellow 2패스에서 재사용 가능하도록 소진하지 않음
   const remaining = [...answer]
 
-  // 1패스: green — remaining에서 소진하지 않음 (yellow 계산에 포함)
+  // 1패스: green — 매칭된 위치를 remaining에서 소진해 yellow 재판정 방지
   for (let i = 0; i < 5; i++) {
     if (guess[i] === answer[i]) {
       pattern[i] = 'green'
+      remaining[i] = ''  // CRITICAL: 소진해 yellow 재매칭 방지
     }
   }
 
-  // 2패스: yellow — remaining 전체(green 포함)에서 검색, 단 green 위치는 건너뜀
+  // 2패스: yellow — green이 아닌 위치만 남은 remaining에서 검색
   for (let i = 0; i < 5; i++) {
     if (pattern[i] === 'green') continue
     const idx = remaining.indexOf(guess[i])
     if (idx !== -1) {
       pattern[i] = 'yellow'
-      remaining[idx] = ''
+      remaining[idx] = ''  // 소진
     }
   }
 
