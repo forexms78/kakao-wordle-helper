@@ -26,7 +26,6 @@ export function AttemptHistory({ attempts }: AttemptHistoryProps) {
                 key={j}
                 jamo={jamo}
                 color={attempt.hints[j]}
-                onClick={() => {}}
                 readonly
               />
             ))}

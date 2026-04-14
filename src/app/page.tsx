@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { AttemptHistory, type Attempt } from '@/components/AttemptHistory'
 import { HintInputGrid } from '@/components/HintInputGrid'
 import { RecommendationPanel } from '@/components/RecommendationPanel'
@@ -17,14 +17,11 @@ function initColors(): HintColor[] {
 export default function HomePage() {
   const [attempts, setAttempts] = useState<Attempt[]>([])
   const [candidates, setCandidates] = useState<string[]>(WORD_LIST)
-  const [suggestion, setSuggestion] = useState<string>('')
+  const [suggestion, setSuggestion] = useState<string>(
+    () => getBestSuggestion(WORD_LIST, WORD_LIST)
+  )
   const [currentColors, setCurrentColors] = useState<HintColor[]>(initColors())
   const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing')
-
-  useEffect(() => {
-    const first = getBestSuggestion(WORD_LIST, WORD_LIST)
-    setSuggestion(first)
-  }, [])
 
   const handleColorChange = useCallback((index: number, color: HintColor) => {
     setCurrentColors(prev => {
@@ -57,6 +54,11 @@ export default function HomePage() {
     const hints = newAttempts.map(a => ({ jamos: a.jamos, pattern: a.hints }))
     const newCandidates = filterCandidates(WORD_LIST, hints)
     setCandidates(newCandidates)
+
+    if (newCandidates.length === 0) {
+      setStatus('lost')
+      return
+    }
 
     if (newAttempts.length >= MAX_ATTEMPTS) {
       setStatus('lost')

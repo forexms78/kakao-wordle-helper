@@ -3,7 +3,7 @@ import type { HintColor } from '@/lib/solver'
 interface HintCellProps {
   jamo: string
   color: HintColor
-  onClick: () => void
+  onClick?: () => void
   readonly?: boolean
 }
 
