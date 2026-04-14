@@ -4,7 +4,7 @@ export type HintColor = 'gray' | 'yellow' | 'green'
 
 export interface AttemptHint {
   jamos: string[]
-  pattern: readonly HintColor[] | HintColor[]
+  pattern: readonly HintColor[]
 }
 
 /**
@@ -82,8 +82,8 @@ export function calcEntropy(word: string, candidates: string[]): number {
 export function getBestSuggestion(candidates: string[], allWords: string[]): string {
   if (candidates.length <= 2) return candidates[0]
 
-  const wordsToEvaluate = candidates.length > 150
-    ? candidates.slice(0, 200)
+  const wordsToEvaluate = allWords.length > 300
+    ? allWords.slice(0, 300)
     : allWords
 
   let bestWord = candidates[0]
