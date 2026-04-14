@@ -7,5 +7,5 @@ module.exports = createJestConfig({
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testPathPattern: ['src/lib/__tests__'],
+  testMatch: ['<rootDir>/src/lib/__tests__/**/*.test.ts'],
 })
