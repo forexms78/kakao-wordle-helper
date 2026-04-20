@@ -7,10 +7,36 @@ import { HintCell } from './HintCell'
 import { WordleKeyboard } from './WordleKeyboard'
 
 const WORD_LIST = (wordListData as string[]).filter(w => decomposeWord(w).length === 5)
-const MAX_ATTEMPTS = 6
+const MAX_ATTEMPTS = 5
+const STORAGE_KEY = 'wordle_state'
 
-function pickRandom(): string {
-  return WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)]
+function todayString(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
+function getWordAt(offset: number): string {
+  const seed = todayString()
+    .split('-')
+    .reduce((acc, n) => acc * 100 + parseInt(n), 0)
+  return WORD_LIST[(seed + offset) % WORD_LIST.length]
+}
+
+function loadOffset(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.date === todayString()) return parsed.offset as number
+    }
+  } catch {}
+  return 0
+}
+
+function saveOffset(offset: number) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayString(), offset }))
+  } catch {}
 }
 
 interface AttemptRow {
@@ -19,15 +45,23 @@ interface AttemptRow {
   colors: HintColor[]
 }
 
-const EMPTY_COLOR: HintColor = 'gray'
-
 export function WordleGame() {
-  const [answer, setAnswer] = useState<string>(() => pickRandom())
+  const [offset, setOffset] = useState(0)
+  const [answer, setAnswer] = useState<string>(() => getWordAt(0))
   const [attempts, setAttempts] = useState<AttemptRow[]>([])
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // 클라이언트에서만 localStorage 읽어 단어 복원
+  useEffect(() => {
+    const saved = loadOffset()
+    if (saved !== 0) {
+      setOffset(saved)
+      setAnswer(getWordAt(saved))
+    }
+  }, [])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -36,7 +70,6 @@ export function WordleGame() {
   const handleSubmit = useCallback(() => {
     if (status !== 'playing') return
     const word = input.trim()
-
     if (!word) return
 
     if (!WORD_LIST.includes(word)) {
@@ -68,13 +101,17 @@ export function WordleGame() {
     }
   }, [input, answer, attempts, status])
 
-  const handleReset = useCallback(() => {
-    setAnswer(pickRandom())
+  // 다음 단어로 이동 (win/lose 모두)
+  const handleNext = useCallback(() => {
+    const next = offset + 1
+    saveOffset(next)
+    setOffset(next)
+    setAnswer(getWordAt(next))
     setAttempts([])
     setInput('')
     setError('')
     setStatus('playing')
-  }, [])
+  }, [offset])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSubmit()
@@ -113,12 +150,7 @@ export function WordleGame() {
             return (
               <div key={rowIdx} className="flex gap-1.5 justify-center">
                 {attempt.jamos.map((jamo, colIdx) => (
-                  <HintCell
-                    key={colIdx}
-                    jamo={jamo}
-                    color={attempt.colors[colIdx]}
-                    readonly
-                  />
+                  <HintCell key={colIdx} jamo={jamo} color={attempt.colors[colIdx]} readonly />
                 ))}
                 <span className="ml-2 self-center text-sm text-gray-500">{attempt.word}</span>
               </div>
@@ -143,10 +175,7 @@ export function WordleGame() {
           return (
             <div key={rowIdx} className="flex gap-1.5 justify-center">
               {Array.from({ length: 5 }).map((_, colIdx) => (
-                <div
-                  key={colIdx}
-                  className="w-12 h-12 border-2 border-gray-800 rounded-lg"
-                />
+                <div key={colIdx} className="w-12 h-12 border-2 border-gray-800 rounded-lg" />
               ))}
             </div>
           )
@@ -156,20 +185,17 @@ export function WordleGame() {
       {/* 범례 */}
       <div className="flex gap-4 justify-center text-xs text-gray-500">
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 bg-gray-700 rounded" />
-          없음
+          <span className="inline-block w-3 h-3 bg-gray-700 rounded" />없음
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 bg-yellow-500 rounded" />
-          위치 틀림
+          <span className="inline-block w-3 h-3 bg-yellow-500 rounded" />위치 틀림
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 bg-green-600 rounded" />
-          정확
+          <span className="inline-block w-3 h-3 bg-green-600 rounded" />정확
         </span>
       </div>
 
-      {/* 입력 영역 */}
+      {/* 입력 */}
       {status === 'playing' && (
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-3">
           <p className="text-sm text-gray-400">두 글자 한국어 단어 입력</p>
@@ -178,14 +204,10 @@ export function WordleGame() {
               ref={inputRef}
               type="text"
               value={input}
-              onChange={e => {
-                setInput(e.target.value)
-                setError('')
-              }}
+              onChange={e => { setInput(e.target.value); setError('') }}
               onKeyDown={handleKeyDown}
               maxLength={4}
-              placeholder="예) 가득"
-              className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white text-lg text-center tracking-widest placeholder:text-gray-600 focus:outline-none focus:border-gray-400"
+              className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white text-lg text-center tracking-widest focus:outline-none focus:border-gray-400"
             />
             <button
               onClick={handleSubmit}
@@ -194,35 +216,34 @@ export function WordleGame() {
               확인
             </button>
           </div>
-          {error && (
-            <p className="text-sm text-red-400 text-center">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
         </div>
       )}
 
-      {/* 결과 */}
+      {/* 정답 */}
       {status === 'won' && (
         <div className="bg-green-900 border border-green-700 rounded-xl p-5 text-center">
           <p className="text-xl font-bold text-green-300 mb-1">정답!</p>
           <p className="text-sm text-gray-400">{attempts.length}번 만에 맞췄습니다</p>
           <button
-            onClick={handleReset}
+            onClick={handleNext}
             className="mt-4 px-6 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm font-medium"
           >
-            다시 하기
+            다음 단어
           </button>
         </div>
       )}
 
+      {/* 실패 */}
       {status === 'lost' && (
         <div className="bg-red-950 border border-red-800 rounded-xl p-5 text-center">
           <p className="text-xl font-bold text-red-300 mb-1">아쉽네요</p>
           <p className="text-sm text-gray-400 mb-1">정답은 <span className="text-white font-bold">{answer}</span> 였습니다</p>
           <button
-            onClick={handleReset}
+            onClick={handleNext}
             className="mt-3 px-6 py-2 bg-red-800 hover:bg-red-700 rounded-lg text-sm font-medium"
           >
-            다시 하기
+            다음 단어
           </button>
         </div>
       )}
