@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { decomposeWord, getPattern, type HintColor } from '@/lib/solver'
 import wordListData from '@/data/word-list.json'
 import { HintCell } from './HintCell'
+import { WordleKeyboard } from './WordleKeyboard'
 
 const WORD_LIST = (wordListData as string[]).filter(w => decomposeWord(w).length === 5)
 const MAX_ATTEMPTS = 6
@@ -80,6 +81,15 @@ export function WordleGame() {
   }, [handleSubmit])
 
   const currentJamos = decomposeWord(input.trim())
+
+  const jamoState = attempts.reduce<Record<string, HintColor>>((acc, attempt) => {
+    const priority: Record<HintColor, number> = { gray: 1, yellow: 2, green: 3 }
+    attempt.jamos.forEach((jamo, i) => {
+      const color = attempt.colors[i]
+      if (!acc[jamo] || priority[color] > priority[acc[jamo]]) acc[jamo] = color
+    })
+    return acc
+  }, {})
 
   return (
     <div className="space-y-6">
@@ -216,6 +226,9 @@ export function WordleGame() {
           </button>
         </div>
       )}
+
+      {/* 자판 */}
+      <WordleKeyboard jamoState={jamoState} />
     </div>
   )
 }
