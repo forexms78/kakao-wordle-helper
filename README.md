@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 카카오 단어맞추기 도우미
 
-## Getting Started
+카카오톡 단어맞추기 게임에서 힌트 색상을 입력하면 가능한 정답을 AI가 추려주는 웹 앱.
 
-First, run the development server:
+라이브: https://kakao-wordle-helper.vercel.app
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 왜 만들었나
+
+카카오톡 단어맞추기는 Wordle과 비슷하지만 한국어다. 한국어는 자모 단위로 힌트가 주어지기 때문에 영어 Wordle 솔버를 그대로 쓸 수 없다. "재수"를 입력하면 ㅈ·ㅏ·ㅣ·ㅅ·ㅜ 다섯 자모로 분해되어 각각 초록·노랑·회색으로 색이 붙는다. 이 구조를 제대로 이해하는 도우미가 없어서 직접 만들었다.
+
+## 핵심 설계: 두벌식 자모 분해
+
+일반적인 한글 분리와 다르게, 이 앱은 **두벌식 키스트로크 기준**으로 자모를 분해한다. `ㅐ`는 키보드에서 ㅏ+ㅣ 두 번 눌러야 입력되므로 2자모로 계산한다. 받침 `ㄺ`은 ㄹ+ㄱ이므로 2자모. 이 방식으로 분해했을 때 정확히 5자모가 되는 단어만 게임에 등장한다.
+
+```
+재수 → ㅈ ㅏ ㅣ ㅅ ㅜ  (5자모)
+가방 → ㄱ ㅏ ㅂ ㅏ ㅇ  (5자모)
+배추 → ㅂ ㅏ ㅣ ㅊ ㅜ  (5자모)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+힌트를 받으면 Shannon 엔트로피 기반으로 후보군을 가장 많이 좁혀주는 다음 추측 단어를 계산해 추천한다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```mermaid
+flowchart TD
+    A[힌트 색상 입력] --> B[자모 분해]
+    B --> C[후보 필터링]
+    C --> D{후보 2개 이하?}
+    D -- 아니오 --> E[엔트로피 계산]
+    E --> F[최적 추천 단어 반환]
+    D -- 예 --> G[바로 정답 표시]
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+단어 목록은 3,055개로 두벌식 5자모 조건을 모두 검증했다.
 
-## Learn More
+## 빠른 시작
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev
+# http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 버전 히스토리
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| 버전 | 날짜 | 변경 내용 |
+|------|------|----------|
+| v1.3 | 2026-04-21 | 복합모음 패턴 단어 추가 — 재수·배추·재미 등 (166→3,055개) |
+| v1.2 | 2026-04-21 | 단어 목록 대규모 확장 (166→379개) |
+| v1.1 | 2026-04-21 | 단어 목록 초기 확장 (166→281개) |
+| v1.0 | 2026-04-01 | 최초 출시 — 두벌식 자모 분해 + 엔트로피 추천 |
