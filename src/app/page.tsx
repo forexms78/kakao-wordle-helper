@@ -26,6 +26,7 @@ export default function HomePage() {
   const [suggestion, setSuggestion] = useState<string>(
     () => getBestSuggestion(WORD_LIST, WORD_LIST)
   )
+  const [userInput, setUserInput] = useState<string>('')
   const [currentColors, setCurrentColors] = useState<HintColor[]>(initColors())
   const [helperStatus, setHelperStatus] = useState<'playing' | 'won' | 'lost'>('playing')
 
@@ -38,13 +39,14 @@ export default function HomePage() {
   }, [])
 
   const handleSubmit = useCallback(() => {
-    if (!suggestion || helperStatus !== 'playing') return
+    const word = userInput.trim() || suggestion
+    if (!word || helperStatus !== 'playing') return
 
-    const jamos = decomposeWord(suggestion)
+    const jamos = decomposeWord(word)
     if (jamos.length !== 5) return
 
     const newAttempt: Attempt = {
-      word: suggestion,
+      word,
       jamos,
       hints: [...currentColors],
     }
@@ -73,19 +75,22 @@ export default function HomePage() {
 
     const nextSuggestion = getBestSuggestion(newCandidates, WORD_LIST)
     setSuggestion(nextSuggestion)
+    setUserInput('')
     setCurrentColors(initColors())
-  }, [suggestion, currentColors, attempts, helperStatus])
+  }, [userInput, suggestion, currentColors, attempts, helperStatus])
 
   const handleReset = useCallback(() => {
     setAttempts([])
     setCandidates(WORD_LIST)
     setCurrentColors(initColors())
     setHelperStatus('playing')
+    setUserInput('')
     const first = getBestSuggestion(WORD_LIST, WORD_LIST)
     setSuggestion(first)
   }, [])
 
-  const currentJamos = suggestion ? decomposeWord(suggestion) : []
+  const activeWord = userInput.trim() || suggestion
+  const currentJamos = activeWord ? decomposeWord(activeWord) : []
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-8">
@@ -168,26 +173,39 @@ export default function HomePage() {
               </div>
             )}
 
-            {helperStatus === 'playing' && suggestion && (
+            {helperStatus === 'playing' && (
               <>
-                <RecommendationPanel
-                  attemptNumber={attempts.length + 1}
-                  suggestion={suggestion}
-                  candidateCount={candidates.length}
-                />
-
-                <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-4">
+                <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-3">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">카카오 결과 입력</p>
-                    <p className="text-xs text-gray-600">칸을 클릭해서 색을 변경하세요</p>
+                    <p className="text-sm text-gray-400 mb-1">내가 입력한 단어</p>
+                    <input
+                      type="text"
+                      value={userInput}
+                      onChange={e => {
+                        setUserInput(e.target.value)
+                        setCurrentColors(initColors())
+                      }}
+                      placeholder={suggestion ? `추천: ${suggestion}` : '단어 입력'}
+                      maxLength={6}
+                      className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white text-center text-lg font-bold placeholder-gray-600 focus:outline-none focus:border-gray-400"
+                    />
+                    <p className="text-xs text-gray-600 mt-1 text-center">
+                      비우면 추천 단어 사용 ({candidates.length}개 후보)
+                    </p>
                   </div>
 
                   {currentJamos.length === 5 && (
-                    <HintInputGrid
-                      jamos={currentJamos}
-                      colors={currentColors}
-                      onColorChange={handleColorChange}
-                    />
+                    <>
+                      <div>
+                        <p className="text-sm text-gray-400 mb-1">카카오 결과 입력</p>
+                        <p className="text-xs text-gray-600">칸을 클릭해서 색을 변경하세요</p>
+                      </div>
+                      <HintInputGrid
+                        jamos={currentJamos}
+                        colors={currentColors}
+                        onColorChange={handleColorChange}
+                      />
+                    </>
                   )}
 
                   <div className="flex gap-4 justify-center text-xs text-gray-500">
@@ -207,11 +225,20 @@ export default function HomePage() {
 
                   <button
                     onClick={handleSubmit}
-                    className="w-full py-3 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 rounded-lg font-semibold transition-colors"
+                    disabled={currentJamos.length !== 5}
+                    className="w-full py-3 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
                   >
-                    결과 확인 - 다음 추천
+                    결과 확인 - 후보 업데이트
                   </button>
                 </div>
+
+                {suggestion && candidates.length > 0 && (
+                  <RecommendationPanel
+                    attemptNumber={attempts.length + 1}
+                    suggestion={suggestion}
+                    candidateCount={candidates.length}
+                  />
+                )}
               </>
             )}
           </div>
