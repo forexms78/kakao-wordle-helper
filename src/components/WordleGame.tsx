@@ -5,6 +5,7 @@ import { decomposeWord, getPattern, type HintColor } from '@/lib/solver'
 import wordListData from '@/data/word-list.json'
 import { HintCell } from './HintCell'
 import { WordleKeyboard } from './WordleKeyboard'
+import { recordWin, gemForAttempts, GEM_INFO } from '@/lib/collection'
 
 const WORD_LIST = (wordListData as string[]).filter(w => decomposeWord(w).length === 5)
 const MAX_ATTEMPTS = 5
@@ -52,6 +53,7 @@ export function WordleGame() {
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing')
+  const [reward, setReward] = useState<{ gem: ReturnType<typeof gemForAttempts>; isNew: boolean } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // 클라이언트에서만 localStorage 읽어 단어 복원
@@ -94,6 +96,7 @@ export function WordleGame() {
 
     if (colors.every(c => c === 'green')) {
       setStatus('won')
+      setReward(recordWin(word, newAttempts.length))
       return
     }
     if (newAttempts.length >= MAX_ATTEMPTS) {
@@ -111,6 +114,7 @@ export function WordleGame() {
     setInput('')
     setError('')
     setStatus('playing')
+    setReward(null)
   }, [offset])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -225,9 +229,22 @@ export function WordleGame() {
         <div className="bg-green-900 border border-green-700 rounded-xl p-5 text-center">
           <p className="text-xl font-bold text-green-300 mb-1">정답!</p>
           <p className="text-sm text-gray-400">{attempts.length}번 만에 맞췄습니다</p>
+          {reward && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-black/30 rounded-lg px-4 py-2">
+              <span className="text-2xl">{GEM_INFO[reward.gem].icon}</span>
+              <div className="text-left">
+                <p className="text-sm font-bold" style={{ color: GEM_INFO[reward.gem].color }}>
+                  {GEM_INFO[reward.gem].label} 획득!
+                </p>
+                {reward.isNew && (
+                  <p className="text-xs text-gray-400">도감에 추가됨</p>
+                )}
+              </div>
+            </div>
+          )}
           <button
             onClick={handleNext}
-            className="mt-4 px-6 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm font-medium"
+            className="mt-4 px-6 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm font-medium block mx-auto"
           >
             다음 단어
           </button>

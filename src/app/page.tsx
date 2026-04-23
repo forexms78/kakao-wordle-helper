@@ -5,6 +5,7 @@ import { AttemptHistory, type Attempt } from '@/components/AttemptHistory'
 import { HintInputGrid } from '@/components/HintInputGrid'
 import { RecommendationPanel } from '@/components/RecommendationPanel'
 import { WordleGame } from '@/components/WordleGame'
+import { CollectionPanel } from '@/components/CollectionPanel'
 import { filterCandidates, getBestSuggestion, decomposeWord, type HintColor } from '@/lib/solver'
 import wordListData from '@/data/word-list.json'
 
@@ -15,7 +16,7 @@ function initColors(): HintColor[] {
   return ['gray', 'gray', 'gray', 'gray', 'gray']
 }
 
-type Tab = 'game' | 'helper'
+type Tab = 'game' | 'helper' | 'collection'
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>('game')
@@ -103,32 +104,22 @@ export default function HomePage() {
 
         {/* 탭 */}
         <div className="flex bg-gray-900 border border-gray-700 rounded-xl p-1 gap-1">
-          <button
-            onClick={() => setActiveTab('game')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'game'
-                ? 'bg-gray-700 text-white'
-                : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            단어 맞추기
-          </button>
-          <button
-            onClick={() => setActiveTab('helper')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'helper'
-                ? 'bg-gray-700 text-white'
-                : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            도우미
-          </button>
+          {(['game', 'helper', 'collection'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {tab === 'game' ? '단어 맞추기' : tab === 'helper' ? '도우미' : '컬렉션'}
+            </button>
+          ))}
         </div>
 
         {/* 탭 콘텐츠 */}
-        {activeTab === 'game' && (
-          <WordleGame />
-        )}
+        {activeTab === 'game' && <WordleGame />}
+        {activeTab === 'collection' && <CollectionPanel />}
 
         {activeTab === 'helper' && (
           <div className="space-y-6">
